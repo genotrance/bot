@@ -38,7 +38,7 @@ proc postSlack(channel, text, user="", avatar="", retry=2): Future[bool] {.async
     "Authorization": "Bearer " & getPass("slack", "token")
   })
 
-  echo "Posting to slack"
+  echo &"Slack @ #{channel} <= {user}: {text}"
   try:
     resp = await client.postContent(url, $params)
   except:
@@ -82,7 +82,10 @@ proc ircBot() =
           of MPrivMsg:
             (chan, text) = (event.params[0], event.params[1])
             echo event.nick, "@", chan, ": ", text
-            if chan == config.getSectionValue("irc", "nick"):
+            if chan in [
+              config.getSectionValue("irc", "nick"),
+              config.getSectionValue("irc", "altnick")
+            ]:
               # From IRC PM to Slack
               discard await postSlack(
                 config.getSectionValue("slack", "channel"),
@@ -97,6 +100,7 @@ proc ircBot() =
                   msg = if spl.len == 2: spl[1].strip() else: ""
 
                 if nick.len != 0 and msg.len != 0:
+                  echo &"IRC <= {nick}: {msg}"
                   await irc.privMsg(nick, msg)
           of MQuit:
             echo event.nick, " quit"
